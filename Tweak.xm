@@ -805,7 +805,8 @@ completionHandler:(void (^)(NSData *data,NSURLResponse *response,NSError *error)
         *
         * Example:
         *      NSError *parseError;
-        *      RequestEnvelope *envelope = [RequestEnvelope parseFromData:newData error:&parseError];
+        *      NSData *requestData = [request HTTPBody];
+        *      RequestEnvelope *envelope = [RequestEnvelope parseFromData:requestData error:&parseError];
         *      NSLog(@"envelope: %@", envelope);
         *
         *      if (parseError) {
