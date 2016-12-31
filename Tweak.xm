@@ -790,39 +790,89 @@ NSDate *currentTimestamp()
 }
 %end
 
-%hook USActionMap
--(id)init
-{
-    id map = %orig;
-    NSLog(@"Init Map: %@", map);
-    return map;
-}
-%end
+/// Other Useful things ///
 
-%hook USExecuteTriggerTask
--(id)map
-{
-    id m = %orig;
-    NSLog(@"USExecuteTriggerTask Map: %@", m);
-    return m;
-}
-%end
+// Intercepting network data
 
-%hook USBaseAction
--(id)map
-{
-    id m = %orig;
-    NSLog(@"USBaseAction Map: %@", m);
-    return m;
-}
-%end
+%hook NSURLSession
+- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request
+completionHandler:(void (^)(NSData *data,NSURLResponse *response,NSError *error))completionHandler {
+    CCLOGWARN(@"=: %@", request);
+    if ([[[request URL] host] hasPrefix:@"pgorelease.nianticlabs.com"]) {
+        
+        // use ‘request’ here to intercept data sent to the Pokemon Go Server
+        /* You’ll need to decode the data using the Pokemon Go Protobufs
+        *
+        * Example:
+        *      NSError *parseError;
+        *      RequestEnvelope *envelope = [RequestEnvelope parseFromData:newData error:&parseError];
+        *      NSLog(@"envelope: %@", envelope);
+        *
+        *      if (parseError) {
+        *          NSLog(@"%@", [parseError localizedDescription]);
+        *      }
+        *       
+        *      NSMutableArray *requestTypes = [NSMutableArray new];
+        *
+        *      for (Request *r in envelope.requestsArray) {
+        *          [requestTypes addObject:@(r.requestType)];
+        *          switch (r.requestType) {
+        *              case RequestType_CatchPokemon:
+        *                  // Do stuff with r.requestMessage
+        *                  break;
+        *              case RequestType_ReleasePokemon:
+        *                  // Do stuff with r.requestMessage
+        *              case RequestType_DiskEncounter:
+        *                  // Do stuff with r.requestMessage
+        *              default:
+        *                  //NSLog(@"Unhandled Request: %@", requestTypeToString(r.requestType));
+        *                  break;
+        *          }
+        *      }
+        */
 
-%hook USActionMapManager
--(id)actionMaps
-{
-    id m = %orig;
-    NSLog(@"USActionMapManager Map: %@", m);
-    return m;
+        void (^replacedCompletion)(NSData *,NSURLResponse *,NSError *) = ^void(NSData *newData,
+                                                                               NSURLResponse *newResponse,
+                                                                               NSError *newError) {
+            /* use ‘newData’ here to intercept and edit data returned from the Pokemon Go Servers
+            *
+            *NSError *parseError;
+            *ResponseEnvelope *envelope = [ResponseEnvelope parseFromData:newData error:&parseError];
+            *if (parseError) {
+            *    NSLog(@"%@", [parseError localizedDescription]);
+            *}
+            *
+            *NSArray<NSData *> *returnsArray = [envelope returnsArray];
+            *
+            *for (NSInteger i = 0; i < returnsArray.count; i++) {
+            *    NSData *responseMessage = returnsArray[i];
+            *    if ([requestTypes count] > i) {
+            *        RequestType requestType = (RequestType)[requestTypes[i] intValue];
+            *        switch (requestType) {
+            *            case RequestType_GetMapObjects:
+            *                // Do Stuff with responseMessage
+            *                break;
+            *            case RequestType_GetInventory:
+            *                // Do Stuff with responseMessage
+            *                break;
+            *            case RequestType_Encounter:
+            *                // Do Stuff with responseMessage
+            *                break;
+            *            case RequestType_DiskEncounter:
+            *                // Do Stuff with responseMessage
+            *            default:
+            *                //NSLog(@"Unahndled Response %@", requestTypeToString(requestType));
+            *                break;
+            *        }
+            *    }
+            *}
+            */
+            completionHandler(newData, newResponse, newError);
+        };
+        
+        return %orig(request, replacedCompletion);
+    }
+    return %orig;
 }
 %end
 
